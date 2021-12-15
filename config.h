@@ -2,8 +2,13 @@
 
 
 //get this info from the "My Key" section of the Adafruit IO website
+<<<<<<< HEAD
 #define IO_USERNAME  "dejavi"
 #define IO_KEY       "aio_WhfU79DROL4T9uFa0xdKNQSTeltY"
+=======
+#define IO_USERNAME  ""
+#define IO_KEY       ""
+>>>>>>> f99cc929878e5497d945ce1493a370910d6b2737
 
 //Input your WiFi username and password here so the ESP8266 can connect to it
 #define WIFI_SSID "none"
