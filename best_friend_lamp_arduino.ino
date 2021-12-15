@@ -5,12 +5,14 @@
 #include <WiFiManager.h>
 
 #define N_LEDS 12
+#define LED_PIN 3
 #define BOT 4 // capacitive sensor pin
+
 //////////////////LAMP ID////////////////////////////////////////////////////////////
 int lampID = 1;
 /////////////////////////////////////////////////////////////////////////////////////
 
-NeoPixelBrightnessBus < NeoGrbFeature, NeoEsp8266Dma800KbpsMethod > strip(N_LEDS, 3);
+NeoPixelBrightnessBus < NeoGrbFeature, NeoEsp8266Dma800KbpsMethod > strip(N_LEDS, LED_PIN);
 
 // Adafruit inicialization
 AdafruitIO_Feed * lamp = io.feed("Lampara"); // Change to your feed
@@ -56,7 +58,7 @@ int state = 0;
 // Time vars
 unsigned long RefMillis;
 unsigned long ActMillis;
-int send_selected_color_time = 4000
+int send_selected_color_time = 4000;
 int answer_time_out          = 900000; // 15 min
 int on_time                  = 900000;
 
@@ -121,7 +123,7 @@ void setup() {
   turn_off();
   //get the status of our value in Adafruit IO
   lamp -> get();
-  sprintf(msg, "%d: Connected", lampID);
+  sprintf(msg, "L%d: connected", lampID);
   lamp -> save(msg);
 }
 
@@ -255,7 +257,7 @@ void loop() {
         ActMillis = millis();
         if (ActMillis - RefMillis > answer_time_out) {
           turn_off();
-          lamp -> save("L%d: answer time out". lampID);
+          lamp -> save("L%d: answer time out", lampID);
           state = 8;
           break;
         }
