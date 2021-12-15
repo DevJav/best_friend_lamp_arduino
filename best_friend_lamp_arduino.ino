@@ -217,7 +217,8 @@ void loop() {
       Serial.println("Answer received");
       Ilum100(SelectColor);
       RefMillis = millis();
-      lamp -> save("L%d: Answer received", lampID);
+      sprintf(msg, "L%d: connected", lampID);
+      lamp -> save(msg);
       lamp -> save(0);
       state = 7;
       break;
@@ -242,7 +243,8 @@ void loop() {
       break;
       // Msg received
     case 9:
-      lamp -> save("L%d: msg received", lampID);
+      sprintf(msg, "L%d: msg received", lampID);
+      lamp -> save(msg);
       RefMillis = millis();
       state = 10;
       break;
@@ -257,7 +259,8 @@ void loop() {
         ActMillis = millis();
         if (ActMillis - RefMillis > answer_time_out) {
           turn_off();
-          lamp -> save("L%d: answer time out", lampID);
+          sprintf(msg, "L%d: answer time out", lampID);
+          lamp -> save(msg);
           state = 8;
           break;
         }
@@ -267,7 +270,8 @@ void loop() {
     case 11:
       Ilum100(SelectColor);
       RefMillis = millis();
-      lamp -> save("L%d: answer sent", lampID);
+      sprintf(msg, "L%d: answer sent", lampID);
+      lamp -> save(msg);
       lamp -> save(1);
       state = 7;
       break;
