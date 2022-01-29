@@ -22,6 +22,12 @@ so thanks to the authors for making it public.
 These components could be easily replaced for por example another microcontroller like ESP32, different LED type (but directonal)
 or even a different lamp.
 
+All together looks like this:
+
+<img src="doc/inside.jpeg" alt="drawing" width="500"/>
+
+The touch sensor has a wire connected so it will cast less shadows inside the lamp, however this might be what makes the sensor trigger by itself sometimes :(
+
 ## Adafruit IO setup
 [Adafruit IO](https://io.adafruit.com/) is a free use server that we will use to communicate the lamps.
 You must create an account and create a new feed with whatever name you want. This created feed is where the messages from the 
@@ -41,7 +47,7 @@ We also need to install some libraries:
 - Change the defines:
     ```
     #define N_LEDS  //  number of leds used
-    #define LED_PIN //  pin connected to leds
+    #define LED_PIN //  pin connected to leds, must be an RX pin
     #define BOT     //  pin connected to capacitive sensor
     ```
 - Change lamp id, one lamp must be se to 1 and the other to 2:
@@ -82,3 +88,5 @@ breath animation until the one who received the message is touched (considered a
 and will turn on at 100% for 15 minutes, or until 15 minutes have passed without response
 and it will turn off.
 
+## Known issues
+- In my experience with TTP223 touch sensor, it may start tiggering randomly by itself. I haven't found a way to fix this apart from incresing the time needed to recognise the first touch.
