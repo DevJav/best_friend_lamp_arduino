@@ -1,7 +1,7 @@
 
 # Arduino Best Friend Lamps
 
-# :warning: IT SEEMS LIKE SOME CHANGES HAVE BEEN MADE INTO ADAFRUIT IO THAT AFFECTS ESP829 :warning:
+# :warning: IT SEEMS LIKE SOME CHANGES HAVE BEEN MADE INTO ADAFRUIT IO THAT AFFECTS ESP8266 :warning:
 ## Due to this, the app may not connect to the Adafruit IO and stay rolling in purple.
 ## I will try to update it soon, but contributions are welcome :D
 
