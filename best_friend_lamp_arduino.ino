@@ -97,7 +97,8 @@ void setup() {
   }
 
   //start connecting to Adafruit IO
-  Serial.print("\nConnecting to Adafruit IO");
+  Serial.printf("\nConnecting to Adafruit IO with User: %s Key: %s.\n", IO_USERNAME, IO_KEY);
+  AdafruitIO_WiFi io(IO_USERNAME, IO_KEY, "", "");
   io.connect();
 
   lamp -> onMessage(handleMessage);
