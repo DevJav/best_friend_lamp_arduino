@@ -9,7 +9,7 @@
 #define BOT 4 // capacitive sensor pin
 
 //////////////////LAMP ID////////////////////////////////////////////////////////////
-int lampID = 1;
+int lampID = 2;
 /////////////////////////////////////////////////////////////////////////////////////
 
 NeoPixelBrightnessBus < NeoGrbFeature, NeoEsp8266Dma800KbpsMethod > strip(N_LEDS, LED_PIN);
@@ -17,27 +17,27 @@ NeoPixelBrightnessBus < NeoGrbFeature, NeoEsp8266Dma800KbpsMethod > strip(N_LEDS
 // Adafruit inicialization
 AdafruitIO_Feed * lamp = io.feed("Lampara"); // Change to your feed
 
-int recVal  = 0;
-int sendVal = 0;
+int recVal  {0};
+int sendVal {0};
 
-int IntMax = 255; //  Max intensity
+const int max_intensity = 255; //  Max intensity
 
-int SelectColor = 0;  //  Index for color vector
+int selected_color = 0;  //  Index for color vector
 
 int i_breath;
 
 char msg[50]; //  Custom messages for Adafruit IO
 
 //  Color definitions
-RgbColor red(IntMax, 0, 0);
-RgbColor green(0, IntMax, 0);
-RgbColor blue(0, 0, IntMax);
-RgbColor purple(200, 0, IntMax);
-RgbColor cian(0, IntMax, IntMax);
-RgbColor yellow(IntMax, 200, 0);
-RgbColor white(IntMax, IntMax, IntMax);
+RgbColor red(max_intensity, 0, 0);
+RgbColor green(0, max_intensity, 0);
+RgbColor blue(0, 0, max_intensity);
+RgbColor purple(200, 0, max_intensity);
+RgbColor cian(0, max_intensity, max_intensity);
+RgbColor yellow(max_intensity, 200, 0);
+RgbColor white(max_intensity, max_intensity, max_intensity);
 RgbColor pink(255, 20, 30);
-RgbColor orange(IntMax, 50, 0);
+RgbColor orange(max_intensity, 50, 0);
 RgbColor black(0, 0, 0);
 
 RgbColor colors[] = {
@@ -58,17 +58,17 @@ int state = 0;
 // Time vars
 unsigned long RefMillis;
 unsigned long ActMillis;
-int send_selected_color_time = 4000;
-int answer_time_out          = 900000; // 15 min
-int on_time                  = 900000;
+const int send_selected_color_time = 4000;
+const int answer_time_out          = 900000;
+const int on_time                  = 900000;
 
 // Disconection timeout
 unsigned long currentMillis;
 unsigned long previousMillis = 0;
-unsigned long conection_time_out = 300000; // 5 minutos
+const unsigned long conection_time_out = 300000; // 5 minutos
 
 // Long press detection
-long long_press_time = 2000;
+const int long_press_time = 2000;
 int lastState = LOW;  // the previous state from the input pin
 int currentState;     // the current reading from the input pin
 unsigned long pressedTime  = 0;
@@ -101,7 +101,7 @@ void setup() {
   AdafruitIO_WiFi io(IO_USERNAME, IO_KEY, "", "");
   io.connect();
 
-  lamp -> onMessage(handleMessage);
+  lamp -> onMessage(handle_message);
 
   while (io.status() < AIO_CONNECTED) {
     Serial.print(".");
@@ -112,16 +112,10 @@ void setup() {
   Serial.println();
   Serial.println(io.statusText());
   // Animation
-  spin(3);
-  turn_off();
-  delay(50);
-  flash(8);
-  delay(50);
-  turn_off();
-  delay(50);
-  flash(8);
-  delay(50);
-  turn_off();
+  spin(3);  turn_off(); delay(50);
+  flash(8); turn_off(); delay(100);
+  flash(8); turn_off(); delay(50);
+
   //get the status of our value in Adafruit IO
   lamp -> get();
   sprintf(msg, "L%d: connected", lampID);
@@ -152,8 +146,8 @@ void loop() {
       break;
       // Wait for button release
     case 1:
-      SelectColor = 0;
-      Ilum50(SelectColor);
+      selected_color = 0;
+      light_half_intensity(selected_color);
       state = 2;
       RefMillis = millis();
       while(digitalRead(BOT) == HIGH){}
@@ -161,20 +155,20 @@ void loop() {
       // Color selector
     case 2:
       if (digitalRead(BOT) == HIGH) {
-        SelectColor++;
-        if (SelectColor > 9)
-          SelectColor = 0;
+        selected_color++;
+        if (selected_color > 9)
+          selected_color = 0;
         while (digitalRead(BOT) == HIGH) {
           delay(50);
         }
-        Ilum50(SelectColor);
+        light_half_intensity(selected_color);
         // Reset timer each time it is touched
         RefMillis = millis();
       }
       // If a color is selected more than a time, it is interpreted as the one selected
       ActMillis = millis();
       if (ActMillis - RefMillis > send_selected_color_time) {
-        if (SelectColor == 9) //  Cancel msg
+        if (selected_color == 9) //  Cancel msg
           state = 8;
         else
           state = 3;
@@ -184,14 +178,14 @@ void loop() {
     case 3:
       sprintf(msg, "L%d: color send", lampID);
       lamp -> save(msg);
-      lamp -> save(SelectColor + sendVal);
-      Serial.print(SelectColor + sendVal);
+      lamp -> save(selected_color + sendVal);
+      Serial.print(selected_color + sendVal);
       state = 4;
-      flash(SelectColor);
-      Ilum50(SelectColor);
+      flash(selected_color);
+      light_half_intensity(selected_color);
       delay(100);
-      flash(SelectColor);
-      Ilum50(SelectColor);
+      flash(selected_color);
+      light_half_intensity(selected_color);
       break;
       // Set timer
     case 4:
@@ -202,7 +196,7 @@ void loop() {
       // Wait for answer
     case 5:
       for (i_breath = 0; i_breath <= 314; i_breath++) {
-        breath(SelectColor, i_breath);
+        breath(selected_color, i_breath);
         ActMillis = millis();
         if (ActMillis - RefMillis > answer_time_out) {
           turn_off();
@@ -216,7 +210,7 @@ void loop() {
       // Answer received
     case 6:
       Serial.println("Answer received");
-      Ilum100(SelectColor);
+      light_full_intensity(selected_color);
       RefMillis = millis();
       sprintf(msg, "L%d: connected", lampID);
       lamp -> save(msg);
@@ -229,7 +223,7 @@ void loop() {
       //  Send pulse
       if (digitalRead(BOT) == HIGH) {
         lamp -> save(420 + sendVal);
-        pulse(SelectColor);
+        pulse(selected_color);
       }
       if (ActMillis - RefMillis > on_time) {
         turn_off();
@@ -252,7 +246,7 @@ void loop() {
       // Send answer wait
     case 10:
       for (i_breath = 236; i_breath <= 549; i_breath++) {
-        breath(SelectColor, i_breath);
+        breath(selected_color, i_breath);
         if (digitalRead(BOT) == HIGH) {
           state = 11;
           break;
@@ -269,7 +263,7 @@ void loop() {
       break;
       // Send answer
     case 11:
-      Ilum100(SelectColor);
+      light_full_intensity(selected_color);
       RefMillis = millis();
       sprintf(msg, "L%d: answer sent", lampID);
       lamp -> save(msg);
@@ -288,7 +282,7 @@ void loop() {
     }
 
     //code that tells the ESP8266 what to do when it recieves new data from the Adafruit IO feed
-    void handleMessage(AdafruitIO_Data * data) {
+    void handle_message(AdafruitIO_Data * data) {
 
       //convert the recieved data to an INT
       int reading = data -> toInt();
@@ -305,13 +299,13 @@ void loop() {
         sprintf(msg, "L%d: pulse received", lampID);
         lamp -> save(msg);
         lamp -> save(0);
-        pulse(SelectColor);
+        pulse(selected_color);
       } else if (reading != 0 && reading / 10 != lampID) {
         // Is it a color msg?
         if (state == 0 && reading != 1) {
           state = 9;
-          SelectColor = reading - recVal;
-        } 
+          selected_color = reading - recVal;
+        }
         // Is it an answer?
         if (state == 5 && reading == 1)
           state = 6;
@@ -319,7 +313,7 @@ void loop() {
     }
 
     void turn_off() {
-      strip.SetBrightness(IntMax);
+      strip.SetBrightness(max_intensity);
       for (int i = 0; i < N_LEDS; i++) {
         strip.SetPixelColor(i, black);
       }
@@ -327,8 +321,8 @@ void loop() {
     }
 
     // 50% intensity
-    void Ilum50(int ind) {
-      strip.SetBrightness(IntMax / 2);
+    void light_half_intensity(int ind) {
+      strip.SetBrightness(max_intensity / 2);
       for (int i = 0; i < N_LEDS; i++) {
         strip.SetPixelColor(i, colors[ind]);
       }
@@ -336,8 +330,8 @@ void loop() {
     }
 
     // 100% intensity
-    void Ilum100(int ind) {
-      strip.SetBrightness(IntMax);
+    void light_full_intensity(int ind) {
+      strip.SetBrightness(max_intensity);
       for (int i = 0; i < N_LEDS; i++) {
         strip.SetPixelColor(i, colors[ind]);
       }
@@ -347,7 +341,7 @@ void loop() {
     void pulse(int ind) {
       int i;
       int i_step = 5;
-      for (i = IntMax; i > 80; i -= i_step) {
+      for (i = max_intensity; i > 80; i -= i_step) {
         strip.SetBrightness(i);
         for (int i = 0; i < N_LEDS; i++) {
           strip.SetPixelColor(i, colors[ind]);
@@ -356,7 +350,7 @@ void loop() {
         }
       }
       delay(20);
-      for (i = 80; i < IntMax; i += i_step) {
+      for (i = 80; i < max_intensity; i += i_step) {
         strip.SetBrightness(i);
         for (int i = 0; i < N_LEDS; i++) {
           strip.SetPixelColor(i, colors[ind]);
@@ -368,7 +362,7 @@ void loop() {
 
     //The code that creates the gradual color change animation in the Neopixels (thank you to Adafruit for this!!)
     void spin(int ind) {
-      strip.SetBrightness(IntMax);
+      strip.SetBrightness(max_intensity);
       for (int i = 0; i < N_LEDS; i++) {
         strip.SetPixelColor(i, colors[ind]);
         strip.Show();
@@ -383,7 +377,7 @@ void loop() {
 
     // Inspired by Jason Yandell
     void breath(int ind, int i) {
-      float MaximumBrightness = IntMax / 2;
+      float MaximumBrightness = max_intensity / 2;
       float SpeedFactor = 0.02;
       float intensity;
       if (state == 5)
@@ -400,7 +394,7 @@ void loop() {
 
     //code to flash the Neopixels when a stable connection to Adafruit IO is made
     void flash(int ind) {
-      strip.SetBrightness(IntMax);
+      strip.SetBrightness(max_intensity);
       for (int i = 0; i < N_LEDS; i++) {
         strip.SetPixelColor(i, colors[ind]);
       }
@@ -410,9 +404,9 @@ void loop() {
 
     }
 
-    // Waiting connection led setup 
+    // Waiting connection led setup
     void wait_connection() {
-      strip.SetBrightness(IntMax);
+      strip.SetBrightness(max_intensity);
       for (int i = 0; i < 3; i++) {
         strip.SetPixelColor(i, yellow);
       }
@@ -443,22 +437,22 @@ void loop() {
     void wificonfig() {
       WiFi.mode(WIFI_STA);
       WiFiManager wifiManager;
-      
+
       std::vector<const char *> menu = {"wifi","info"};
       wifiManager.setMenu(menu);
       // set dark theme
       wifiManager.setClass("invert");
-      
+
       bool res;
       wifiManager.setAPCallback(configModeCallback);
       res = wifiManager.autoConnect("Lamp", "password"); // password protected ap
-    
+
       if (!res) {
         spin(0);
         delay(50);
         turn_off();
       } else {
-        //if you get here you have connected to the WiFi    
+        //if you get here you have connected to the WiFi
         spin(3);
         delay(50);
         turn_off();
