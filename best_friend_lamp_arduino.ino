@@ -69,6 +69,7 @@ const unsigned long conection_time_out = 300000; // 5 minutos
 
 // Long press detection
 const int long_press_time = 2000;
+const int short_press_time = 500; // 0.5 second
 int lastState = LOW;  // the previous state from the input pin
 int currentState;     // the current reading from the input pin
 unsigned long pressedTime  = 0;
@@ -219,18 +220,30 @@ void loop() {
       break;
       // Turned on
     case 7:
+        
       ActMillis = millis();
-      //  Send pulse
-      if (digitalRead(BOT) == HIGH) {
-        lamp -> save(420 + sendVal);
-        pulse(selected_color);
+      currentState = digitalRead(BOT);
+      if(lastState == LOW && currentState == HIGH)  // Button is pressed
+      {
+        pressedTime = millis();
       }
-      if (ActMillis - RefMillis > on_time) {
+      else if(currentState == HIGH) {
+        releasedTime = millis();
+        long pressDuration = releasedTime - pressedTime; 
+        if( pressDuration > short_press_time )
+        {
+        lamp -> save(420 + sendVal);
+        pulse(SelectColor);
+        RefMillis = millis();        }
+      }
+      else if(ActMillis - RefMillis > on_time) {
         turn_off();
         lamp -> save(0);
         state = 8;
       }
-      break;
+      lastState = currentState;
+      break;        
+        
       // Reset before state 0
     case 8:
       turn_off();
@@ -300,6 +313,7 @@ void loop() {
         lamp -> save(msg);
         lamp -> save(0);
         pulse(selected_color);
+        RefMillis = millis()  ;
       } else if (reading != 0 && reading / 10 != lampID) {
         // Is it a color msg?
         if (state == 0 && reading != 1) {
