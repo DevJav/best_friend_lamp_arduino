@@ -17,7 +17,6 @@ NeoPixelBrightnessBus < NeoGrbFeature, NeoEsp8266Dma800KbpsMethod > strip(N_LEDS
 // Adafruit inicialization
 AdafruitIO_Feed * lamp = io.feed("Lampara"); // Change to your feed
 
-int recVal  {0};
 int sendVal {0};
 
 const int max_intensity = 255; //  Max intensity
@@ -88,14 +87,7 @@ void setup() {
   pinMode(BOT, INPUT);
 
   //  Set ID values
-  if (lampID == 1) {
-    recVal = 20;
-    sendVal = 10;
-  }
-  else if (lampID == 2) {
-    recVal = 10;
-    sendVal = 20;
-  }
+  sendval = 10 * lampID
 
   //start connecting to Adafruit IO
   Serial.printf("\nConnecting to Adafruit IO with User: %s Key: %s.\n", IO_USERNAME, IO_KEY);
@@ -308,7 +300,7 @@ void loop() {
         sprintf(msg, "L%d: ping", lampID);
         lamp -> save(msg);
         lamp -> save(0);
-      } else if (reading == 420 + recVal) {
+      } else if (reading >= 420 && reading != 420 + sendval) {
         sprintf(msg, "L%d: pulse received", lampID);
         lamp -> save(msg);
         lamp -> save(0);
@@ -318,7 +310,7 @@ void loop() {
         // Is it a color msg?
         if (state == 0 && reading != 1) {
           state = 9;
-          selected_color = reading - recVal;
+          selected_color = reading % 10;
         }
         // Is it an answer?
         if (state == 5 && reading == 1)
