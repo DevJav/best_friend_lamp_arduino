@@ -87,7 +87,7 @@ void setup() {
   pinMode(BOT, INPUT);
 
   //  Set ID values
-  sendval = 10 * lampID
+  sendval = 10 * lampID;
 
   //start connecting to Adafruit IO
   Serial.printf("\nConnecting to Adafruit IO with User: %s Key: %s.\n", IO_USERNAME, IO_KEY);
