@@ -17,7 +17,6 @@ NeoPixelBrightnessBus < NeoGrbFeature, NeoEsp8266Dma800KbpsMethod > strip(N_LEDS
 // Adafruit inicialization
 AdafruitIO_Feed * lamp = io.feed("Lampara"); // Change to your feed
 
-int recVal  {0};
 int sendVal {0};
 
 const int max_intensity = 255; //  Max intensity
@@ -69,6 +68,7 @@ const unsigned long conection_time_out = 300000; // 5 minutos
 
 // Long press detection
 const int long_press_time = 2000;
+const int short_press_time = 500; // 0.5 second
 int lastState = LOW;  // the previous state from the input pin
 int currentState;     // the current reading from the input pin
 unsigned long pressedTime  = 0;
@@ -87,14 +87,7 @@ void setup() {
   pinMode(BOT, INPUT);
 
   //  Set ID values
-  if (lampID == 1) {
-    recVal = 20;
-    sendVal = 10;
-  }
-  else if (lampID == 2) {
-    recVal = 10;
-    sendVal = 20;
-  }
+  sendval = 10 * lampID;
 
   //start connecting to Adafruit IO
   Serial.printf("\nConnecting to Adafruit IO with User: %s Key: %s.\n", IO_USERNAME, IO_KEY);
@@ -219,18 +212,30 @@ void loop() {
       break;
       // Turned on
     case 7:
+        
       ActMillis = millis();
-      //  Send pulse
-      if (digitalRead(BOT) == HIGH) {
-        lamp -> save(420 + sendVal);
-        pulse(selected_color);
+      currentState = digitalRead(BOT);
+      if(lastState == LOW && currentState == HIGH)  // Button is pressed
+      {
+        pressedTime = millis();
       }
-      if (ActMillis - RefMillis > on_time) {
+      else if(currentState == HIGH) {
+        releasedTime = millis();
+        long pressDuration = releasedTime - pressedTime; 
+        if( pressDuration > short_press_time )
+        {
+        lamp -> save(420 + sendVal);
+        pulse(SelectColor);
+        RefMillis = millis();        }
+      }
+      else if(ActMillis - RefMillis > on_time) {
         turn_off();
         lamp -> save(0);
         state = 8;
       }
-      break;
+      lastState = currentState;
+      break;        
+        
       // Reset before state 0
     case 8:
       turn_off();
@@ -295,16 +300,17 @@ void loop() {
         sprintf(msg, "L%d: ping", lampID);
         lamp -> save(msg);
         lamp -> save(0);
-      } else if (reading == 420 + recVal) {
+      } else if (reading >= 420 && reading != 420 + sendval) {
         sprintf(msg, "L%d: pulse received", lampID);
         lamp -> save(msg);
         lamp -> save(0);
         pulse(selected_color);
+        RefMillis = millis()  ;
       } else if (reading != 0 && reading / 10 != lampID) {
         // Is it a color msg?
         if (state == 0 && reading != 1) {
           state = 9;
-          selected_color = reading - recVal;
+          selected_color = reading % 10;
         }
         // Is it an answer?
         if (state == 5 && reading == 1)
