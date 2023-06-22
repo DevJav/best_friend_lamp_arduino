@@ -1,5 +1,11 @@
 {
     "files.associations": {
-        "best_friend_lamp_arduinoc": "cpp"
+        "best_friend_lamp_arduinoc": "cpp",
+        "array": "cpp",
+        "memory": "cpp",
+        "ranges": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp"
     }
 }
