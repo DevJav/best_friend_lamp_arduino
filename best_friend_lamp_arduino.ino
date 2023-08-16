@@ -1,12 +1,12 @@
 
-#include "utils/definitions.h"
-#include "utils/utils.h"
-#include "utils/leds_control.h"
-
 #include <EEPROM.h>
 #include <WiFiManager.h>
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
+
+#include "utils/definitions.h"
+#include "utils/utils.h"
+#include "utils/leds_control.h"
 
 State current_state = State::IDLE;
 NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Dma800KbpsMethod>strip(N_LEDS, LEDS_PIN);
@@ -19,6 +19,7 @@ String last_message = "";
 
 uint32_t start_time = 0;
 uint8_t color_index = 0;
+uint8_t walk_iterator = 0;
 
 RgbColor current_color = BLACK;
 
@@ -31,11 +32,21 @@ void setup()
 
     strip.Begin();
 
+    turnOnLedsAlternating();
+
     configureWifi();
     configureMqtt();
 
+    current_color = WHITE;
+    performDoubleFlashAnimation();
+
     turnOffLeds();
     Serial.println("Ready!");
+}
+
+bool isButtonPressed()
+{
+    return digitalRead(BUTTON_PIN) == HIGH;
 }
 
 void loop()
@@ -44,7 +55,7 @@ void loop()
     {
         case State::IDLE:
         {
-            if (digitalRead(BUTTON_PIN) == HIGH)
+            if (isButtonPressed())
             {
                 current_state = State::COLOR_SELECTION;
                 color_index = 0;
@@ -63,7 +74,7 @@ void loop()
         }
         case State::COLOR_SELECTION:
         {
-            if (digitalRead(BUTTON_PIN) == HIGH)
+            if (isButtonPressed())
             {
                 Serial.println("Color changed");
                 color_index = (color_index + 1) % N_COLORS;
@@ -124,9 +135,9 @@ void loop()
             performBreatheAnimation(true);
             if (current_color == BLACK)
             {
-                turnOnLedsHalfIntensity(getColorFromMessage());
+                current_color = getColorFromMessage();
             }
-            if (digitalRead(BUTTON_PIN) == HIGH)
+            if (isButtonPressed())
             {
                 current_state = State::TURNED_ON;
                 waitForRelease();
@@ -169,6 +180,14 @@ void turnOnLedsRainbow()
     }
 }
 
+void turnOnLedsAlternating()
+{
+    for (int i = 0; i < N_LEDS; i++)
+    {
+        updateNthLed(strip, COLORS[i % 2], MAX_BRIGHTNESS, i);
+    }
+}
+
 void performBreatheAnimation(bool start_from_zero)
 {
     float intensity;
@@ -191,7 +210,31 @@ void performDoubleFlashAnimation()
     delay(FLASH_TIME_MS / 2);
     updateAllLeds(strip, current_color, MAX_BRIGHTNESS);
     delay(FLASH_TIME_MS);
-    updateAllLeds(strip, current_color, MAX_BRIGHTNESS / 2);
+    updateAllLeds(strip, BLACK, MAX_BRIGHTNESS);
+}
+
+void performWalkAnimation()
+{
+    if (((millis() - start_time) % ANIMATION_STEP_TIME_MS) == 0)
+    {
+        updateAllLeds(strip, BLACK, 0);
+        delay(100);
+        updateNthLed(strip, current_color, MAX_BRIGHTNESS / 2, walk_iterator);
+        updateNthLed(strip, current_color, MAX_BRIGHTNESS / 2, walk_iterator + (N_LEDS / 2));
+        walk_iterator = (walk_iterator + 1) % (N_LEDS / 2);
+    }
+}
+
+void performWaveAnimation() 
+{
+    updateAllLeds(strip, BLACK, 0);
+    for (int i = 0; i < N_LEDS / 2; i++) {
+        updateNthLed(strip, current_color, MAX_BRIGHTNESS, i);
+        updateNthLed(strip, current_color, MAX_BRIGHTNESS, N_LEDS - i - 1);
+        delay(ANIMATION_STEP_TIME_MS);
+        updateNthLed(strip, BLACK, MAX_BRIGHTNESS, i);
+        updateNthLed(strip, BLACK, MAX_BRIGHTNESS, N_LEDS - i - 1);
+    }
 }
 
 bool isMessageReceived()
@@ -249,7 +292,7 @@ void mqttCallback(char * topic, byte * payload, unsigned int length)
 void waitForRelease()
 {
     unsigned long start_time = millis();
-    while (digitalRead(BUTTON_PIN) == HIGH)
+    while (isButtonPressed())
     {
         if (millis() - start_time > RESET_CONFIGURATION_TIME_MS)
         {
@@ -258,6 +301,7 @@ void waitForRelease()
             wifiManager.resetSettings();
             ESP.restart();
         }
+      yield();
     };
 }
 
@@ -265,6 +309,13 @@ void configureWifi()
 {
     WiFi.mode(WIFI_STA);
     WiFiManager wifiManager;
+
+    if (wifiManager.getWiFiIsSaved())
+    {
+        Serial.println("Saved wifi found");
+        wifiManager.autoConnect();
+        return;
+    }
 
     std::vector<const char *> menu = {"wifi", "info"};
     wifiManager.setMenu(menu);
@@ -285,8 +336,6 @@ void configureWifi()
     turnOnLedsRainbow();
 
     wifiManager.autoConnect("Lamp", "password");
-
-    turnOffLeds();
 
     struct MqttConfiguration mqtt_config;
     setParameterValue(myNameParam, mqtt_config.thisLampName, "Lamp1", sizeof(mqtt_config.thisLampName));
@@ -313,6 +362,8 @@ void configureWifi()
     Serial.println(mqtt_config.broker);
     Serial.println("Port: ");
     Serial.println(mqtt_config.port);
+
+    turnOffLeds();
 }
 
 void configureMqtt()
@@ -336,6 +387,11 @@ void configureMqtt()
 
     topic_to_subscribe = "devjav/projects/best_friend_lamp/" + String(mqtt_config.groupName) + "/" + String(mqtt_config.friendLampName);
     topic_to_publish = "devjav/projects/best_friend_lamp/" + String(mqtt_config.groupName) + "/" + String(mqtt_config.thisLampName);
+    Serial.println("Topic to subscribe: ");
+    Serial.println(topic_to_subscribe);
+    Serial.println("Topic to publish: ");
+    Serial.println(topic_to_publish);
+    
     String user = "devjav_" + String(mqtt_config.thisLampName);
 
     client.setServer(mqtt_config.broker, atoi(mqtt_config.port));
