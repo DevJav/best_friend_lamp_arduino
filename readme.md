@@ -1,3 +1,5 @@
+Forked from DevJav/best_friend_lamp_arduino to attempt to run multiple lamps  ***Beta***
+
 
 # Arduino Best Friend Lamps
 
